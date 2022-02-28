@@ -35,6 +35,10 @@ typedef struct List List;
  *  Active piece will store in two separate lists
 */
 
+/*  Macro for traversing the whole list */
+#define list_for_each(pos, head) \
+    for (pos = (head)->next; pos != NULL; pos = pos->next)
+
 /*
  *  Initialize the list node pointed by node
  */
@@ -103,8 +107,34 @@ void search_black_pawn_legal(Position *pos, List *legal, List *piece);
 
 
 /*  Initialize active piece from position */
-void get_active(Position* pos, List *active);
+void get_active(Position* pos, List *white, List *black);
 
+/*  Make the specified move 
+ *  Return value is the bit mask of the move
+ *  1: King ordinary moves
+ *  2: Rook moves King
+ *  4: pawn moves two square
+ *  8: pawn promotion
+ *  16: King castle
+ *  32: Rook moves Queen
+ *  0: other moves
+ * 
+ *  For convinience, modify castling rook position after validating moves
+ *  State of position is left unchanged as well. Change states after true
+ *  legal move.
+ */
+int make_move(Position *pos, List *white, List *black, List *piece, int row, int col);
 
+/*  Unmake the specified move and restore active piece */
+void unmake_move(Position *pos, List *white, List *black);
+
+/*  Clear buffer */
+void clear_buffer();
+
+/*  Is king checked */
+int is_checked(Position *pos, List *white, List *black);
+
+/* Update position grid using active pieces */
+void update_grid(Position *pos, List *white, List *black);
 
 #endif

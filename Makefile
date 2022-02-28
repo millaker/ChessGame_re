@@ -1,13 +1,15 @@
 CC := gcc
 CFLAGS := -Wall -g
-LFLAGS :=
-OBJECTS := Board.o FEN.o main.o misc.o
-HEADER := Board.h FEN.h Enum.h misc.h
+LFLAGS := -Llib
+LINK := -lmingw32 -lSDL2main -lSDL2 -lSDL2_image
+IFLAGS := -Iinclude
+OBJECTS := Board.o FEN.o main.o misc.o GUI.o
+HEADER := Board.h FEN.h Enum.h misc.h GUI.h
 
 main: $(OBJECTS) 
-	$(CC) $(CFLAGS) $^ -o main
+	$(CC) $(LFLAGS) $(CFLAGS) $^ $(LINK) -o main
 %.o: %.c $(HEADER)
-	$(CC) -c $(CFLAGS) $< -o $@
+	$(CC) -c $(IFLAGS) $(CFLAGS) $< -o $@
 
 .PHONY: clean run
 clean:
