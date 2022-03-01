@@ -78,6 +78,10 @@ void init_pos(Position* pos);
 */
 void gen_pseudo_legal(Position *pos, List *legal, List *active);
 
+/* Generate legal moves for specific piece */
+void gen_legal_from_piece(Position *pos, List *legal, List *active, List *piece);
+
+
 /* 
  *  Search legal moves for horizontal and vertical
  */
@@ -114,9 +118,10 @@ void get_active(Position* pos, List *white, List *black);
  *  1: King ordinary moves
  *  2: Rook moves King
  *  4: pawn moves two square
- *  8: pawn promotion
- *  16: King castle
+ *  8:  King castle King
+ *  16: King castle Queen
  *  32: Rook moves Queen
+ *  64: captured something
  *  0: other moves
  * 
  *  For convinience, modify castling rook position after validating moves
@@ -134,7 +139,17 @@ void clear_buffer();
 /*  Is king checked */
 int is_checked(Position *pos, List *white, List *black);
 
+/*  A check function for castling specifically, check if the square is check */
+int is_square_checked(Position *pos, List *white, List *black, int row, int col);
+
 /* Update position grid using active pieces */
 void update_grid(Position *pos, List *white, List *black);
+
+/*  Update game state 
+ *  Update rook position and active list if castle
+ */
+void update_state(Position *pos, List *piece, int move_type, List *active);
+/* side = 0 for king side, = 1 for queen side */
+void update_rook_castling(Position *pos, int side, List *active);
 
 #endif

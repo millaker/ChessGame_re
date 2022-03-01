@@ -7,7 +7,9 @@
 int main(int argc, char *argv[])
 {
     init_game();
+    printf("Enter game loop");
     game_loop();
+    printf("Exit game loop");
     close_game();
     return 0;
 }

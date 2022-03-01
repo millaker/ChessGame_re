@@ -12,6 +12,12 @@
 /* Initialize SDL */
 void init_game();
 void init_texture();
+void init_SDL();
+void init_window();
+void init_renderer();
+void init_image();
+void init_mixer();
+void init_board();
 
 /* Main loop of the window */
 void game_loop();
@@ -33,6 +39,9 @@ void draw_chesspiece_on_cursor();
 
 /*  Pick piece using mouse position */
 void pick_piece();
+
+/* Drop piece on cursor and validate the move*/
+void drop_piece();
 
 
 

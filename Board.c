@@ -100,6 +100,7 @@ void list_remove_node(List* head, List *target)
         curr = curr->next;
     }
     prev->next = curr->next;
+    target->next = NULL;
 }
 
 List *list_alloc()
@@ -141,10 +142,11 @@ void get_active(Position* pos, List *white, List *black)
 
 void free_list(List* head)
 {
-    List *curr = head->next;
+    List *curr = head->next, *next;
     while (curr) {
+        next = curr->next;
         free(curr);
-        curr = curr->next;
+        curr = next;
     }
 }
 
@@ -345,8 +347,8 @@ void search_king_legal(Position *pos, List *legal, List *piece)
         move_check(pos, legal, piece, row, col);
     }
     //Castle
-    int KingSide = (piece->piece & 8) ? 8: 2;
-    int QueenSide = (piece->piece & 8) ? 4: 1;
+    int KingSide = (piece->piece & 8) ? 2: 8;
+    int QueenSide = (piece->piece & 8) ? 1: 4;
     if ((pos->castling & KingSide) == KingSide &&
         pos->grid[curr_row][curr_col + 1] == EMPTY &&
         pos->grid[curr_row][curr_col + 2] == EMPTY) {
@@ -445,7 +447,7 @@ void search_black_pawn_legal(Position *pos, List *legal, List *piece)
         if (pos->grid[curr_row + 1][curr_col] == EMPTY && 
             pos->grid[curr_row + 2][curr_col] == EMPTY ) {
             temp = list_alloc();
-            temp->row = curr_row + 1;
+            temp->row = curr_row + 2;
             temp->col = curr_col;
             temp->piece = piece->piece;
             list_insert_tail(legal, temp);
@@ -483,7 +485,7 @@ void search_black_pawn_legal(Position *pos, List *legal, List *piece)
     int p_col = pos->en_passant;
     if ((curr_col == p_col - 1 || curr_col == p_col + 1) && curr_row == 4) {
         temp = list_alloc();
-        temp->row = curr_row - 1;
+        temp->row = curr_row + 1;
         temp->col = p_col;
             temp->piece = piece->piece;
         list_insert_tail(legal, temp);
@@ -506,14 +508,14 @@ int make_move(Position *pos, List *white, List *black, List *piece, int row, int
     modified_buf = NULL;
     added_buf = NULL;
     promotion_buf = NULL;
-    int promotion = 0, king_move = 0, pawn_2= 0, rook_move = 0, castle = 0;
+    int castle_queen = 0, king_move = 0, pawn_2= 0, rook_move = 0, castle_king = 0;
+    int capture = 0;
     Color curr_color = (piece->piece & 8);
     List *attack = curr_color == WHITE ? white: black;
     List *defense = curr_color == WHITE ? black: white;
     //Check promotion
     if ((piece->piece == W_PAWN && row == 0) || 
         (piece->piece == B_PAWN && row == 7)) {
-        promotion = 8;
         promotion_buf = piece;
         list_remove_node(attack, piece);
         List *new = list_alloc();
@@ -533,9 +535,12 @@ int make_move(Position *pos, List *white, List *black, List *piece, int row, int
         rook_move = piece->col == 0 ? 32: 2;
     }
     //Check castle
-    if ((piece->piece == W_KING || piece->piece == B_KING) && 
-    (piece->col - col > 1 || piece->col - col < -1)) {
-        castle = 16;
+    if ((piece->piece == W_KING || piece->piece == B_KING)) {
+        king_move = 1; 
+        if (piece->col - col > 1)
+            castle_queen = 16;
+        else if (piece->col - col < -1)
+            castle_king = 8;
     }
     //Check destination square
     Piece target = pos->grid[row][col];
@@ -554,19 +559,22 @@ int make_move(Position *pos, List *white, List *black, List *piece, int row, int
     if ((piece->piece == W_PAWN || piece->piece == B_PAWN) &&
         col == pos->en_passant && (row == 2 || row == 5)) {
             list_for_each(captured, defense) {
-                if ((captured->piece & 6) == 6)
+                if (captured->row == (row == 2? 3: 4) && captured->col == col)
                     break;
             }
         }
     removed_buf = captured;
-    list_remove_node(defense, captured);
+    if (captured) {
+        capture = 64;
+        list_remove_node(defense, captured);
+    }
     //Update moving node, store in buffer
     modified_buf = piece;
     row_buf = piece->row;
     col_buf = piece->col;
     piece->row = row;
     piece->col = col;
-    return (promotion & king_move & rook_move & pawn_2 & castle);
+    return (castle_queen | king_move | rook_move | pawn_2 | castle_king | capture);
 }
 
 void unmake_move(Position *pos, List *white, List *black)
@@ -645,4 +653,141 @@ void clear_buffer()
         free(promotion_buf);
     if (removed_buf)
         free(removed_buf);
+}
+
+void gen_legal_from_piece(Position *pos, List *legal, List *active, List *piece)
+{
+    switch (piece->piece) {
+        case W_KING:
+        case B_KING:
+            search_king_legal(pos, legal, piece);
+            break;
+        case W_ROOK:
+        case B_ROOK:
+            search_rook_legal(pos, legal, piece);
+            break;
+        case W_QUEEN:
+        case B_QUEEN:
+            search_rook_legal(pos, legal, piece);
+            search_bishop_legal(pos, legal, piece);
+            break;
+        case W_BISHOP:
+        case B_BISHOP:
+            search_bishop_legal(pos, legal, piece);
+            break;
+        case W_KNIGHT:
+        case B_KNIGHT:
+            search_knight_legal(pos, legal, piece);
+            break;
+        case W_PAWN:
+            search_white_pawn_legal(pos, legal, piece);
+            break;
+        case B_PAWN:
+            search_black_pawn_legal(pos, legal, piece);
+            break;
+        default:
+            break;
+    }
+}
+
+void update_state(Position *pos, List *piece, int move_type, List *active)
+{
+    //Castling Right update
+    //Castle Queen
+    if ((move_type & 16) == 16) {
+        pos->castling &= pos->active_color == WHITE ? 3: 12;
+        //update rook position
+        update_rook_castling(pos, 1, active);
+    }
+    //Castle King
+    if ((move_type & 8) == 8) {
+        pos->castling &= pos->active_color == WHITE ? 3: 12;
+        //update rook position
+        update_rook_castling(pos, 0, active);
+    }
+    if ((move_type & 1) == 1) {
+        pos->castling &= pos->active_color == WHITE ? 3: 12;
+    }
+    if ((move_type & 2) == 2) {
+        pos->castling &= pos->active_color == WHITE ? 7: 13;
+    }
+    if ((move_type & 32) == 32) {
+        pos->castling &= pos->active_color == WHITE ? 11: 14;
+    }
+
+    //en_passant update
+    pos->en_passant = -1;
+    if ((move_type & 4) == 4) {
+        pos->en_passant = piece->col;
+    }
+}
+
+void update_rook_castling(Position *pos, int side, List *active)
+{
+    int col = side ? 0 : 7;
+    int res = side ? 3 : 5;
+    int row = pos->active_color == WHITE? 7: 0;
+    Piece piece = pos->active_color == WHITE ? W_ROOK: B_ROOK;
+    List *rook;
+    list_for_each(rook, active){
+        if (rook->piece == piece && rook->row == row && rook->col == col)
+            break;
+    }
+    if (!rook) {
+        printf("Can't locate rook in active list.\nActive list not synced.\n");
+        return;
+    }
+    rook->col = res;
+}
+
+int is_square_checked(Position *pos, List *white, List *black, int row, int col)
+{
+    int res = 0;
+    Color color = pos->active_color;
+    List *attack = color == WHITE? black: white;
+    List *temp = list_alloc();
+    gen_pseudo_legal(pos, temp, attack);
+    //Is checked
+    List *node;
+    list_for_each(node, temp){
+        if (node->col == col && node->row == row) {
+            res = 1;
+            free_list(temp);
+            free(temp);
+            return res;
+        }
+    }
+    free_list(temp);
+    free(temp);
+    return res;
+}
+
+void gen_true_legal(Position *pos, List *legal, List *white, List *black)
+{
+    List *active = pos->active_color == WHITE ? white: black;
+    List *piece, *pseudo = list_alloc(), *move;
+    list_for_each(piece, active){
+        if (piece) {
+            gen_legal_from_piece(pos, pseudo, active, piece);
+            list_for_each(move, pseudo){
+                int move_type = make_move(pos, white, black, piece, move->row, move->col);
+                if ((move_type & 8) == 8 || (move_type & 16) == 16) {
+                    if(is_square_checked(pos, white, black, piece->row, (move_type & 8) == 8? 5: 3)) {
+                        unmake_move(pos, white, black);
+                        update_grid(pos, white, black);
+                    }
+                } else if(is_checked(pos,white, black)) {
+                    unmake_move(pos, white, black);
+                    update_grid(pos, white, black);
+                } else {
+                    List *temp = list_alloc();
+                    *temp = *move;
+                    list_insert_tail(legal, temp);
+                    unmake_move(pos, white, black);
+                    update_grid(pos, white, black);
+                }
+                free_list(pseudo);
+            }
+        }
+    }
 }
