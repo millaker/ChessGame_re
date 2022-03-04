@@ -161,13 +161,15 @@ void search_rook_legal(Position *pos, List *legal, List *piece)
     Color curr_color = (piece->piece & 8);
     //Up
     for (int i = curr_row - 1; i >= 0; i--) {
-        List *temp = list_alloc();
+        Move *move = move_alloc();
+        move->curr_piece = piece;
+        List *temp = &move->list;
         temp->col = curr_col;
         temp->row = i;
         temp->piece = piece->piece;
         if (pos->grid[i][curr_col] != EMPTY) {
             if ((pos->grid[i][curr_col] & 8) == curr_color) {
-                free(temp);
+                free(move);
                 break;
             }
             list_insert_tail(legal, temp);
@@ -177,13 +179,15 @@ void search_rook_legal(Position *pos, List *legal, List *piece)
     }
     //Down
     for (int i = curr_row + 1; i < 8; i++) {
-        List *temp = list_alloc();
+        Move *move = move_alloc();
+        move->curr_piece = piece;
+        List *temp = &move->list;
         temp->col = curr_col;
         temp->row = i;
         temp->piece = piece->piece;
         if (pos->grid[i][curr_col] != EMPTY) {
             if ((pos->grid[i][curr_col] & 8) == curr_color) {
-                free(temp);
+                free(move);
                 break;
             }
             list_insert_tail(legal, temp);
@@ -193,13 +197,15 @@ void search_rook_legal(Position *pos, List *legal, List *piece)
     }
     //Right
     for (int i = curr_col + 1; i < 8; i++) {
-        List *temp = list_alloc();
+        Move *move = move_alloc();
+        move->curr_piece = piece;
+        List *temp = &move->list;
         temp->col = i;
         temp->row = curr_row;
         temp->piece = piece->piece;
         if (pos->grid[curr_row][i] != EMPTY) {
             if ((pos->grid[curr_row][i] & 8) == curr_color) {
-                free(temp);
+                free(move);
                 break;
             }
             list_insert_tail(legal, temp);
@@ -209,13 +215,15 @@ void search_rook_legal(Position *pos, List *legal, List *piece)
     }
     //Left
     for (int i = curr_col - 1; i >= 0; i--) {
-        List *temp = list_alloc();
+        Move *move = move_alloc();
+        move->curr_piece = piece;
+        List *temp = &move->list;
         temp->col = i;
         temp->row = curr_row;
         temp->piece = piece->piece;
         if (pos->grid[curr_row][i] != EMPTY) {
             if ((pos->grid[curr_row][i] & 8) == curr_color) {
-                free(temp);
+                free(move);
                 break;
             }
             list_insert_tail(legal, temp);
@@ -235,13 +243,15 @@ void search_bishop_legal(Position *pos, List *legal, List *piece)
     Color curr_color = (piece->piece & 8);
     //Up Right
     for (int i = curr_row - 1, j = curr_col + 1; i >= 0 && j < 8; i--, j++) {
-        List *temp = list_alloc();
+        Move *move = move_alloc();
+        move->curr_piece = piece;
+        List *temp = &move->list;
         temp->col = j;
         temp->row = i;
         temp->piece = piece->piece;
         if (pos->grid[i][j] != EMPTY) {
             if ((pos->grid[i][j] & 8) == curr_color) {
-                free(temp);
+                free(move);
                 break;
             }
             list_insert_tail(legal, temp);
@@ -251,13 +261,15 @@ void search_bishop_legal(Position *pos, List *legal, List *piece)
     }
     //Up Left
     for (int i = curr_row - 1, j = curr_col - 1; i >= 0 && j >= 0; i--, j--) {
-        List *temp = list_alloc();
+        Move *move = move_alloc();
+        move->curr_piece = piece;
+        List *temp = &move->list;
         temp->col = j;
         temp->row = i;
         temp->piece = piece->piece;
         if (pos->grid[i][j] != EMPTY) {
             if ((pos->grid[i][j] & 8) == curr_color) {
-                free(temp);
+                free(move);
                 break;
             }
             list_insert_tail(legal, temp);
@@ -267,13 +279,15 @@ void search_bishop_legal(Position *pos, List *legal, List *piece)
     }
     //Down Left
     for (int i = curr_row + 1, j = curr_col - 1; i < 8 && j >= 0; i++, j--) {
-        List *temp = list_alloc();
+        Move *move = move_alloc();
+        move->curr_piece = piece;
+        List *temp = &move->list;
         temp->col = j;
         temp->row = i;
         temp->piece = piece->piece;
         if (pos->grid[i][j] != EMPTY) {
             if ((pos->grid[i][j] & 8) == curr_color) {
-                free(temp);
+                free(move);
                 break;
             }
             list_insert_tail(legal, temp);
@@ -283,13 +297,15 @@ void search_bishop_legal(Position *pos, List *legal, List *piece)
     }
     //Down Right
     for (int i = curr_row + 1, j = curr_col + 1; i < 8 && j < 8; i++, j++) {
-        List *temp = list_alloc();
+        Move *move = move_alloc();
+        move->curr_piece = piece;
+        List *temp = &move->list;
         temp->col = j;
         temp->row = i;
         temp->piece = piece->piece;
         if (pos->grid[i][j] != EMPTY) {
             if ((pos->grid[i][j] & 8) == curr_color) {
-                free(temp);
+                free(move);
                 break;
             }
             list_insert_tail(legal, temp);
@@ -320,13 +336,15 @@ void move_check(Position *pos, List *legal, List *piece, int row, int col)
 {
     Color color = (piece->piece & 8);
     if (row >= 0 && col >= 0 && row < 8 && col < 8) {
-        List *temp = list_alloc();
+        Move *move = move_alloc();
+        move->curr_piece = piece;
+        List *temp = &move->list;
         temp->row = row;
         temp->col = col;
         temp->piece = piece->piece;
         if ((pos->grid[row][col] & 8) == color && 
             pos->grid[row][col] != EMPTY)
-            free(temp);
+            free(move);
         else
             list_insert_tail(legal, temp);
     }
@@ -355,7 +373,8 @@ void search_king_legal(Position *pos, List *legal, List *piece)
         pos->grid[curr_row][curr_col + 2] == EMPTY) {
         row = curr_row;
         col = curr_col + 2;
-        List *temp = list_alloc();
+        Move *move = move_alloc();
+        List *temp = &move->list;
         temp->row = row;
         temp->col = col;
         temp->piece = piece->piece;
@@ -367,7 +386,8 @@ void search_king_legal(Position *pos, List *legal, List *piece)
         pos->grid[curr_row][curr_col - 3] == EMPTY) {
         row = curr_row;
         col = curr_col - 2;
-        List *temp = list_alloc();
+        Move *move = move_alloc();
+        List *temp = &move->list;
         temp->row = row;
         temp->col = col;
         temp->piece = piece->piece;
@@ -384,12 +404,15 @@ void search_white_pawn_legal(Position *pos, List *legal, List *piece)
     }
     int curr_row = piece->row, curr_col = piece->col;
     List *temp;
+    Move *move;
     Color curr_color = WHITE;
     //First move
     if (curr_row == 6) {
         if (pos->grid[curr_row - 1][curr_col] == EMPTY && 
             pos->grid[curr_row - 2][curr_col] == EMPTY ) {
-            temp = list_alloc();
+            move = move_alloc();
+        move->curr_piece = piece;
+            temp = &move->list;
             temp->row = curr_row - 2;
             temp->col = curr_col;
             temp->piece = piece->piece;
@@ -397,10 +420,12 @@ void search_white_pawn_legal(Position *pos, List *legal, List *piece)
         }
     }
     if (curr_row - 1 >= 0 && pos->grid[curr_row - 1][curr_col] == EMPTY) {
-        temp = list_alloc();
+        move = move_alloc();
+        move->curr_piece = piece;
+        temp = &move->list;
         temp->row = curr_row - 1;
         temp->col = curr_col;
-            temp->piece = piece->piece;
+        temp->piece = piece->piece;
         list_insert_tail(legal, temp);
     }
     //Pawn attacks
@@ -408,7 +433,9 @@ void search_white_pawn_legal(Position *pos, List *legal, List *piece)
         if (curr_col - 1 >= 0 && 
             pos->grid[curr_row - 1][curr_col - 1] != EMPTY &&
             (pos->grid[curr_row - 1][curr_col - 1] & 8) != curr_color) {
-            temp = list_alloc();
+            move = move_alloc();
+        move->curr_piece = piece;
+            temp = &move->list;
             temp->row = curr_row - 1;
             temp->col = curr_col - 1;
             temp->piece = piece->piece;
@@ -417,7 +444,9 @@ void search_white_pawn_legal(Position *pos, List *legal, List *piece)
         if (curr_col + 1 < 8 && 
             pos->grid[curr_row - 1][curr_col + 1] != EMPTY &&
             (pos->grid[curr_row - 1][curr_col + 1] & 8) != curr_color) {
-            temp = list_alloc();
+            move = move_alloc();
+        move->curr_piece = piece;
+            temp = &move->list;
             temp->row = curr_row - 1;
             temp->col = curr_col + 1;
             temp->piece = piece->piece;
@@ -427,10 +456,12 @@ void search_white_pawn_legal(Position *pos, List *legal, List *piece)
     //En passant
     int p_col = pos->en_passant;
     if ((curr_col == p_col - 1 || curr_col == p_col + 1) && curr_row == 3) {
-        temp = list_alloc();
+        move = move_alloc();
+        move->curr_piece = piece;
+        temp = &move->list;
         temp->row = curr_row - 1;
         temp->col = p_col;
-            temp->piece = piece->piece;
+        temp->piece = piece->piece;
         list_insert_tail(legal, temp);
     }
 }
@@ -442,13 +473,16 @@ void search_black_pawn_legal(Position *pos, List *legal, List *piece)
         exit(-1);
     }
     int curr_row = piece->row, curr_col = piece->col;
+    Move *move;
     List *temp;
     Color curr_color = BLACK;
     //First move
     if (curr_row == 1) {
         if (pos->grid[curr_row + 1][curr_col] == EMPTY && 
             pos->grid[curr_row + 2][curr_col] == EMPTY ) {
-            temp = list_alloc();
+            move = move_alloc();
+        move->curr_piece = piece;
+            temp = &move->list;
             temp->row = curr_row + 2;
             temp->col = curr_col;
             temp->piece = piece->piece;
@@ -456,10 +490,12 @@ void search_black_pawn_legal(Position *pos, List *legal, List *piece)
         }
     }
     if (curr_row + 1 < 8 && pos->grid[curr_row + 1][curr_col] == EMPTY) {
-        temp = list_alloc();
+        move = move_alloc();
+        move->curr_piece = piece;
+        temp = &move->list;
         temp->row = curr_row + 1;
         temp->col = curr_col;
-            temp->piece = piece->piece;
+        temp->piece = piece->piece;
         list_insert_tail(legal, temp);
     }
     //Pawn attacks
@@ -467,7 +503,9 @@ void search_black_pawn_legal(Position *pos, List *legal, List *piece)
         if (curr_col - 1 >= 0 && 
             pos->grid[curr_row + 1][curr_col - 1] != EMPTY &&
             (pos->grid[curr_row + 1][curr_col - 1] & 8) != curr_color) {
-            temp = list_alloc();
+            move = move_alloc();
+        move->curr_piece = piece;
+            temp = &move->list;
             temp->row = curr_row + 1;
             temp->col = curr_col - 1;
             temp->piece = piece->piece;
@@ -476,7 +514,9 @@ void search_black_pawn_legal(Position *pos, List *legal, List *piece)
         if (curr_col + 1 < 8 && 
             pos->grid[curr_row + 1][curr_col + 1] != EMPTY &&
             (pos->grid[curr_row + 1][curr_col + 1] & 8) != curr_color) {
-            temp = list_alloc();
+            move = move_alloc();
+        move->curr_piece = piece;
+            temp = &move->list;
             temp->row = curr_row + 1;
             temp->col = curr_col + 1;
             temp->piece = piece->piece;
@@ -486,10 +526,12 @@ void search_black_pawn_legal(Position *pos, List *legal, List *piece)
     //En passant
     int p_col = pos->en_passant;
     if ((curr_col == p_col - 1 || curr_col == p_col + 1) && curr_row == 4) {
-        temp = list_alloc();
+        move = move_alloc();
+        move->curr_piece = piece;
+        temp = &move->list;
         temp->row = curr_row + 1;
         temp->col = p_col;
-            temp->piece = piece->piece;
+        temp->piece = piece->piece;
         list_insert_tail(legal, temp);
     }
 }
@@ -787,7 +829,9 @@ void gen_true_legal(Position *pos, List *legal, List *white, List *black)
                     res = 1;
                 } 
                 if (!res) {
-                    List *temp = list_alloc();
+                    Move *add = move_alloc();
+                    List *temp = &add->list;
+                    add->curr_piece = piece;
                     *temp = *move;
                     temp->next = NULL;
                     list_insert_tail(legal, temp);
@@ -796,8 +840,8 @@ void gen_true_legal(Position *pos, List *legal, List *white, List *black)
                 }
                 res = 0;
             }
+            move_list_free(pseudo);
         }
-        free_list(pseudo);
     }
 }
 
@@ -825,6 +869,7 @@ void move_list_free(List *head)
         curr = curr->next;
         free(temp);
     }
+    head->next = NULL;
 }
 
 List *get_piece_from_node(List *node)

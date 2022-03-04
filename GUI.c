@@ -16,6 +16,7 @@
 #define INTERVAL (WINDOW_HEIGHT/8)
 #define START_X ((WINDOW_WIDTH-WINDOW_HEIGHT)/2)
 #define START_Y 0
+#define ANIMATION_TIME 2
 
 SDL_Window* win = NULL;
 SDL_Renderer* ren = NULL;
@@ -28,6 +29,7 @@ int selected_col = -1;
 int mouse_x = 0;
 int mouse_y = 0;
 int is_mouse_down = 0;
+int end_game = 0;
 SDL_Color White_Board_Color = {
     .r = 252,
     .g = 216,
@@ -41,7 +43,6 @@ SDL_Color Black_Board_Color = {
     .a = 255
 };
 int is_running = 1;
-int end_game = 0;
 Position *pos = NULL;
 List *White_Active = NULL;
 List *Black_Active = NULL;
@@ -74,18 +75,13 @@ void game_loop()
     char *s = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
     FEN_Parser(pos, s);
     is_running = 1;
-    List *legal = list_alloc();
-    gen_true_legal(pos, legal, White_Active, Black_Active);
-    printf("\nLegal count: %d\n",list_count(legal));
-    free_list(legal);
-    free(legal);
     while (is_running) {
         SDL_SetRenderDrawColor(ren, 255, 134, 214, 255);
         SDL_RenderClear(ren);
         //Handle input
-        handle_input();
 
         //Draw 
+        handle_input();
         draw_chessboard();
         draw_legal_moves();
         draw_chesspiece();
@@ -295,10 +291,12 @@ void drop_piece()
     }
     if (!curr_piece)
         return;
-    //Generate legal moves
+    //Read moves from True Legal
     List *move;
     list_for_each(move, True_Legal){
-        if (move->piece == selected && move->row == row && move->col == col)
+        Move *curr = list_entry(move, Move, list);
+        if (curr->curr_piece == curr_piece &&
+            move->row == row && move->col == col)
             break;
     }
     if (!move) {
@@ -321,7 +319,7 @@ void drop_piece()
     //Change active color
     pos->active_color = pos->active_color ? 0 : 8;
     //Update true legal move list
-    free_list(True_Legal);
+    move_list_free(True_Legal);
     gen_true_legal(pos, True_Legal, White_Active, Black_Active);
     printf("Legal move count\n: %d", list_count(True_Legal));
     if (list_count(True_Legal) == 0) {
@@ -428,7 +426,10 @@ void draw_legal_moves()
     b.w = INTERVAL * mul;
     int offset = INTERVAL * ((1 - mul)/ 2);
     list_for_each(moves, True_Legal){
-        if (moves->piece == selected) {
+        Move *temp = list_entry(moves, Move, list);
+        if (temp->curr_piece->piece == selected &&
+            temp->curr_piece->row == selected_row &&
+            temp->curr_piece->col == selected_col) {
             SDL_SetRenderDrawColor(ren, 200, 241, 173, 150);
             b.x = START_X + INTERVAL * moves->col + offset;
             b.y = START_Y+ INTERVAL * moves->row + offset;
