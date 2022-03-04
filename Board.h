@@ -35,9 +35,42 @@ typedef struct List List;
  *  Active piece will store in two separate lists
 */
 
+/*  Using another structure that contains the list as a member 
+ *  uses List* to connect the node, and uses the same operation 
+ */
+struct Move{
+    List *curr_piece;
+    List list;
+};
+typedef struct Move Move;
+
+/* offset of member in the entry */
+#ifndef offsetof
+#define offsetof(TYPE, MEMBER) ((size_t) &((TYPE *)0)->MEMBER)
+#endif
+/* Container of macro used by linux lists */
+#define container_of(ptr, type, member) ({			\
+	const typeof(((type *)0)->member) * __mptr = (ptr);	\
+	(type *)((char *)__mptr - offsetof(type, member)); })
+/* list entry of the list */
+#define list_entry(ptr, type, member) \
+	container_of(ptr, type, member)
+
 /*  Macro for traversing the whole list */
 #define list_for_each(pos, head) \
     for (pos = (head)->next; pos != NULL; pos = pos->next)
+
+/* Initialize the move node */
+void init_move_node(Move *);
+
+/* Allocate a new move node */
+Move* move_alloc();
+
+/* Free the whole move list except the head */
+void move_list_free();
+
+/* Get the curr piece of the move node */
+List* get_piece_from_move(List*);
 
 /*
  *  Initialize the list node pointed by node
@@ -151,5 +184,8 @@ void update_grid(Position *pos, List *white, List *black);
 void update_state(Position *pos, List *piece, int move_type, List *active);
 /* side = 0 for king side, = 1 for queen side */
 void update_rook_castling(Position *pos, int side, List *active);
+
+/* Generate true legal moves */
+void gen_true_legal(Position* pos, List *legal, List *white, List *black);
 
 #endif

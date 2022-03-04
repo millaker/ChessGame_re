@@ -43,6 +43,11 @@ void pick_piece();
 /* Drop piece on cursor and validate the move*/
 void drop_piece();
 
+/* For fun */
+void draw_winning_page();
+
+/* Draw legal moves for specific piece when picked up */
+void draw_legal_moves();
 
 
 #endif

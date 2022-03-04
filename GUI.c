@@ -21,6 +21,7 @@ SDL_Window* win = NULL;
 SDL_Renderer* ren = NULL;
 SDL_Texture *white_tex[6];
 SDL_Texture *black_tex[6];
+SDL_Texture *won;
 Piece selected = EMPTY;
 int selected_row = -1;
 int selected_col = -1;
@@ -40,9 +41,11 @@ SDL_Color Black_Board_Color = {
     .a = 255
 };
 int is_running = 1;
+int end_game = 0;
 Position *pos = NULL;
 List *White_Active = NULL;
 List *Black_Active = NULL;
+List *True_Legal = NULL;
 
 Mix_Chunk *capture_sound;
 Mix_Chunk *move_sound;
@@ -71,6 +74,11 @@ void game_loop()
     char *s = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
     FEN_Parser(pos, s);
     is_running = 1;
+    List *legal = list_alloc();
+    gen_true_legal(pos, legal, White_Active, Black_Active);
+    printf("\nLegal count: %d\n",list_count(legal));
+    free_list(legal);
+    free(legal);
     while (is_running) {
         SDL_SetRenderDrawColor(ren, 255, 134, 214, 255);
         SDL_RenderClear(ren);
@@ -79,8 +87,13 @@ void game_loop()
 
         //Draw 
         draw_chessboard();
+        draw_legal_moves();
         draw_chesspiece();
         draw_chesspiece_on_cursor();
+
+        if(end_game){
+            draw_winning_page();
+        }
 
         SDL_RenderPresent(ren);
     }
@@ -224,6 +237,10 @@ void init_texture()
         SDL_FreeSurface(sur);
         black_tex[i] = tex;
     }
+    char *path = "./assets/won.png";
+    sur = IMG_Load(path);
+    won = SDL_CreateTextureFromSurface(ren, sur);
+    SDL_FreeSurface(sur);
 }
 
 void draw_chesspiece_on_cursor()
@@ -279,39 +296,19 @@ void drop_piece()
     if (!curr_piece)
         return;
     //Generate legal moves
-    List *legal = list_alloc();
-    gen_legal_from_piece(pos, legal, active, curr_piece);
-    //If is in legal moves, make move and check
     List *move;
-    list_for_each(move, legal){
+    list_for_each(move, True_Legal){
         if (move->piece == selected && move->row == row && move->col == col)
             break;
     }
     if (!move) {
         printf("Dropped failed, Not in legal move\n");
-        list_print(legal);
         return;
     }
     int move_type;
     move_type = make_move(pos, White_Active, Black_Active, curr_piece, row, col);
-    //Check castle square
-    if ((move_type & 8) == 8 || (move_type & 16) == 16) {
-        if(is_square_checked(pos, White_Active, Black_Active, curr_piece->row, (move_type & 8) == 8? 5: 3)) {
-            unmake_move(pos, White_Active, Black_Active);
-            update_grid(pos, White_Active, Black_Active);
-            return;
-        }
-    }
-    //Check true legal move
-    if(is_checked(pos,White_Active, Black_Active)) {
-        unmake_move(pos, White_Active, Black_Active);
-        update_grid(pos, White_Active, Black_Active);
-        return;
-    }
     update_state(pos, curr_piece, move_type, active);
     update_grid(pos, White_Active, Black_Active);
-    //Change active color
-    pos->active_color = pos->active_color ? 0 : 8;
     //Play sound
     if ((move_type & 64) == 64) {
         printf("Play capture sound\n");
@@ -320,6 +317,16 @@ void drop_piece()
     else {
         printf("Play move sound\n");
         Mix_PlayChannel(-1, move_sound, 0);
+    }
+    //Change active color
+    pos->active_color = pos->active_color ? 0 : 8;
+    //Update true legal move list
+    free_list(True_Legal);
+    gen_true_legal(pos, True_Legal, White_Active, Black_Active);
+    printf("Legal move count\n: %d", list_count(True_Legal));
+    if (list_count(True_Legal) == 0) {
+        printf("%s won the game.\n", pos->active_color == WHITE? "BLACK": "WHITE");
+        end_game = 1;
     }
 }
 
@@ -375,6 +382,7 @@ void init_board()
     FEN_Parser(pos, s);
     White_Active = list_alloc();
     Black_Active = list_alloc();
+    True_Legal = list_alloc();
     if (!White_Active || !Black_Active) {
         printf("Active list alloc failed\n");
         free(pos);
@@ -383,6 +391,9 @@ void init_board()
     get_active(pos, White_Active, Black_Active);
     list_print(White_Active);
     list_print(Black_Active);
+    printf("Print true legal move:\n");
+    list_print(True_Legal);
+    gen_true_legal(pos, True_Legal, White_Active, Black_Active);
 }
 
 void init_mixer()
@@ -393,4 +404,37 @@ void init_mixer()
     }
     capture_sound = Mix_LoadWAV("./assets/capture_sound.wav");
     move_sound = Mix_LoadWAV("./assets/move_sound.wav");
+}
+
+void draw_winning_page()
+{
+    SDL_Rect b = {
+        .x = 0,
+        .y = 0,
+        .h = WINDOW_HEIGHT,
+        .w = WINDOW_WIDTH
+    };
+    SDL_RenderCopy(ren, won, NULL, &b);
+}
+
+void draw_legal_moves()
+{
+    if (selected == EMPTY)
+        return;
+    List *moves;
+    SDL_Rect b;
+    float mul = 1;
+    b.h = INTERVAL * mul;
+    b.w = INTERVAL * mul;
+    int offset = INTERVAL * ((1 - mul)/ 2);
+    list_for_each(moves, True_Legal){
+        if (moves->piece == selected) {
+            SDL_SetRenderDrawColor(ren, 200, 241, 173, 150);
+            b.x = START_X + INTERVAL * moves->col + offset;
+            b.y = START_Y+ INTERVAL * moves->row + offset;
+            SDL_RenderFillRect(ren, &b);
+            SDL_SetRenderDrawColor(ren, 255, 255, 255, 255);
+            SDL_RenderDrawRect(ren, &b);
+        }
+    }
 }

@@ -148,6 +148,7 @@ void free_list(List* head)
         free(curr);
         curr = next;
     }
+    head->next = NULL;
 }
 
 void search_rook_legal(Position *pos, List *legal, List *piece)
@@ -362,7 +363,8 @@ void search_king_legal(Position *pos, List *legal, List *piece)
     }
     if ((pos->castling & QueenSide) == QueenSide &&
         pos->grid[curr_row][curr_col - 1] == EMPTY &&
-        pos->grid[curr_row][curr_col - 2] == EMPTY) {
+        pos->grid[curr_row][curr_col - 2] == EMPTY &&
+        pos->grid[curr_row][curr_col - 3] == EMPTY) {
         row = curr_row;
         col = curr_col - 2;
         List *temp = list_alloc();
@@ -766,6 +768,7 @@ void gen_true_legal(Position *pos, List *legal, List *white, List *black)
 {
     List *active = pos->active_color == WHITE ? white: black;
     List *piece, *pseudo = list_alloc(), *move;
+    int res = 0;
     list_for_each(piece, active){
         if (piece) {
             gen_legal_from_piece(pos, pseudo, active, piece);
@@ -775,19 +778,57 @@ void gen_true_legal(Position *pos, List *legal, List *white, List *black)
                     if(is_square_checked(pos, white, black, piece->row, (move_type & 8) == 8? 5: 3)) {
                         unmake_move(pos, white, black);
                         update_grid(pos, white, black);
+                        res = 1;
                     }
-                } else if(is_checked(pos,white, black)) {
+                } 
+                if(!res && is_checked(pos,white, black)) {
                     unmake_move(pos, white, black);
                     update_grid(pos, white, black);
-                } else {
+                    res = 1;
+                } 
+                if (!res) {
                     List *temp = list_alloc();
                     *temp = *move;
+                    temp->next = NULL;
                     list_insert_tail(legal, temp);
                     unmake_move(pos, white, black);
                     update_grid(pos, white, black);
                 }
-                free_list(pseudo);
+                res = 0;
             }
         }
+        free_list(pseudo);
     }
+}
+
+void init_move_node(Move *curr)
+{
+    curr->curr_piece = NULL;
+    init_list_node(&(curr->list));
+}
+
+Move* move_alloc()
+{
+    Move *temp = malloc(sizeof(Move));
+    if (!temp) {
+        printf("Allocate move node failed\n");
+    }
+    init_move_node(temp);
+    return temp;
+}
+
+void move_list_free(List *head)
+{
+    List *curr = head->next;
+    while (curr) {
+        Move *temp = list_entry(curr, Move, list);
+        curr = curr->next;
+        free(temp);
+    }
+}
+
+List *get_piece_from_node(List *node)
+{
+    Move *temp = list_entry(node, Move, list);
+    return temp->curr_piece;
 }
